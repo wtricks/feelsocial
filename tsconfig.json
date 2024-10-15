@@ -28,8 +28,8 @@
     "baseUrl": "./src",
     "paths": {
       "@/*": ["src/*"]
-    },
+    }
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"],
+  "include": ["src/**/*.ts", "express.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }
