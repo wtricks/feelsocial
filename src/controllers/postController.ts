@@ -21,17 +21,17 @@ export const createPost = async (req: Request, res: Response) => {
     const { content } = matchedData(req) as { content: string };
 
     if (!content) {
-      res.status(400).json({ message: 'Content is required' });
+      res.sendResponse(400, 'Content is required', true);
       return;
     }
 
     const post = new Post({ content, author });
     await post.save();
 
-    res.status(201).json(post);
+    res.sendResponse(201, 'Post created successfully', false, post);
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.sendResponse(500, 'Internal server error', true);
   }
 };
 
@@ -45,15 +45,17 @@ export const createPost = async (req: Request, res: Response) => {
  */
 export const getPosts = async (req: Request, res: Response) => {
   const {
-    limit = '10',
-    page = '1',
+    limit = 10,
+    page = 1,
     search = '',
-    sort = 'desc',
-  } = matchedData(req) as { [key: string]: string };
+    order = 'desc',
+  } = matchedData(req) as {
+    limit: number;
+    page: number;
+    search: string;
+    order: 'desc' | 'asc';
+  };
 
-  const parsedLimit = Math.min(20, parseInt(limit, 10));
-  const skipPages = parsedLimit * (parseInt(page, 10) - 1);
-  const sortingOrder = sort === 'desc' ? -1 : 1;
   const userId = req.user?.id as MongooseDocumentId;
 
   try {
@@ -86,12 +88,12 @@ export const getPosts = async (req: Request, res: Response) => {
         path: 'author',
         select: ['username', '_id'],
       })
-      .sort({ createdAt: sortingOrder })
-      .skip(skipPages)
-      .limit(parsedLimit);
+      .sort({ createdAt: order === 'desc' ? -1 : 1 })
+      .skip(limit * (page - 1))
+      .limit(limit);
 
     // If the found posts are less than the limit, fetch from top 20 users with most friends
-    if (posts.length < parsedLimit) {
+    if (posts.length < limit) {
       const additionalPosts = await Post.find({
         author: {
           $in: await User.find()
@@ -105,9 +107,9 @@ export const getPosts = async (req: Request, res: Response) => {
           path: 'author',
           select: ['username', '_id'],
         })
-        .sort({ createdAt: sortingOrder })
-        .skip(skipPages + posts.length)
-        .limit(parsedLimit - posts.length);
+        .sort({ createdAt: order === 'desc' ? -1 : 1 })
+        .skip(posts.length + (page - 1) * limit)
+        .limit(limit - posts.length);
 
       posts = [...posts, ...additionalPosts];
     }
@@ -143,13 +145,13 @@ export const updatePost = async (req: Request, res: Response) => {
     };
 
     if (!content) {
-      res.status(400).json({ message: 'Content is required' });
+      res.sendResponse(400, 'Content is required', true);
       return;
     }
 
     const post = await Post.findById(postId);
     if (!post) {
-      res.status(404).json({ message: 'Post not found' });
+      res.sendResponse(404, 'Post not found', true);
       return;
     }
 
@@ -176,14 +178,11 @@ export const deletePost = async (req: Request, res: Response) => {
   try {
     const postId = matchedData(req).postId as MongooseDocumentId;
     const currentUser = req.user?.id as MongooseDocumentId;
-    const post = await Post.findOne({ _id: postId, author: currentUser });
-    if (!post) {
-      res.status(404).json({ message: 'Post not found' });
-      return;
-    }
 
-    await post.deleteOne({ _id: postId });
-    res.sendResponse(200, 'Post deleted successfully', false, post);
+    await Post.findOneAndDelete({ _id: postId, author: currentUser });
+    await Comment.deleteMany({ post: postId });
+
+    res.sendResponse(200, 'Post deleted successfully', false);
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);
@@ -210,7 +209,7 @@ export const getPostById = async (req: Request, res: Response) => {
       })
       .select('-likes -comments');
     if (!post) {
-      res.status(404).json({ message: 'Post not found' });
+      res.sendResponse(404, 'Post not found', true);
       return;
     }
     res.sendResponse(200, 'Post retrieved successfully', false, post);
@@ -237,7 +236,7 @@ export const likePost = async (req: Request, res: Response) => {
 
     const post = await Post.findOne({ _id: postId });
     if (!post) {
-      res.status(404).json({ message: 'Post not found' });
+      res.sendResponse(404, 'Post not found', true);
       return;
     }
 
@@ -275,7 +274,7 @@ export const getPostLikedUsers = async (req: Request, res: Response) => {
         select: ['username', '_id'],
       });
     if (!post) {
-      res.status(404).json({ message: 'Post not found' });
+      res.sendResponse(404, 'Post not found', true);
       return;
     }
     res.sendResponse(200, 'Post retrieved successfully', false, post.likes);

@@ -16,12 +16,10 @@ type MongooseDocumentId = mongoose.Types.ObjectId;
 export const getSuggestUsers = async (req: Request, res: Response) => {
   try {
     const currentUserId = req.user?.id as MongooseDocumentId;
-    const { limit = '10', page = '1' } = matchedData(req) as {
-      [key: string]: string;
+    const { limit = 10, page = 1 } = matchedData(req) as {
+      limit: number;
+      page: number;
     };
-
-    const parsedLimit = Math.min(20, parseInt(limit, 10));
-    const skipPages = parsedLimit * (parseInt(page, 10) - 1);
 
     const friends = (await User.findById(currentUserId))!.friends;
     const suggestedUsers = await User.aggregate([
@@ -98,8 +96,8 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
       // Sort by score
       { $sort: { score: -1 } },
       // Apply pagination
-      { $skip: skipPages },
-      { $limit: parsedLimit },
+      { $skip: limit * (page - 1) },
+      { $limit: limit },
     ]);
 
     if (suggestedUsers.length > 0) {
@@ -117,8 +115,8 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
       friendRequests: { $ne: currentUserId },
     })
       .sort({ 'friends.length': -1 })
-      .skip(skipPages)
-      .limit(parsedLimit);
+      .skip(limit * (page - 1))
+      .limit(limit);
 
     res.sendResponse(
       200,
@@ -286,15 +284,16 @@ export const getFriendsList = async (req: Request, res: Response) => {
     const userId = (matchedData(req).userId ||
       req.user?.id) as MongooseDocumentId;
     const {
-      limit = '10',
-      page = '1',
+      limit = 10,
+      page = 1,
       search = '',
-      sort = 'desc',
-    } = matchedData(req) as { [key: string]: string };
-
-    const parsedLimit = Math.min(20, parseInt(limit, 10));
-    const skipPages = parsedLimit * (parseInt(page, 10) - 1);
-    const sortingOrder = { createdAt: sort === 'desc' ? -1 : 1 };
+      order = 'desc',
+    } = matchedData(req) as {
+      limit: number;
+      page: number;
+      search: string;
+      order: 'desc' | 'asc';
+    };
 
     const currentUser = await User.findById(userId)
       .select('friends')
@@ -304,9 +303,11 @@ export const getFriendsList = async (req: Request, res: Response) => {
           username: { $regex: search, $options: 'i' },
         },
         options: {
-          limit: parsedLimit,
-          skip: skipPages,
-          sort: sortingOrder,
+          limit: limit,
+          skip: limit * (page - 1),
+          sort: {
+            createdAt: order === 'desc' ? -1 : 1,
+          },
         },
       });
 
@@ -331,15 +332,16 @@ export const getReceivedRequests = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id as MongooseDocumentId;
     const {
-      limit = '10',
-      page = '1',
+      limit = 10,
+      page = 1,
       search = '',
-      sort = 'desc',
-    } = matchedData(req) as { [key: string]: string };
-
-    const parsedLimit = Math.min(20, parseInt(limit, 10));
-    const skipPages = parsedLimit * (parseInt(page, 10) - 1);
-    const sortingOrder = { createdAt: sort === 'desc' ? -1 : 1 };
+      order = 'desc',
+    } = matchedData(req) as {
+      limit: number;
+      page: number;
+      search: string;
+      order: 'desc' | 'asc';
+    };
 
     const currentUser = await User.findById(userId)
       .select('friendRequests')
@@ -349,9 +351,11 @@ export const getReceivedRequests = async (req: Request, res: Response) => {
           username: { $regex: search, $options: 'i' },
         },
         options: {
-          limit: parsedLimit,
-          skip: skipPages,
-          sort: sortingOrder,
+          limit: limit,
+          skip: limit * (page - 1),
+          sort: {
+            createdAt: order === 'desc' ? -1 : 1,
+          },
         },
       });
 
@@ -376,22 +380,24 @@ export const getSentRequests = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id as MongooseDocumentId;
     const {
-      limit = '10',
-      page = '1',
+      limit = 10,
+      page = 1,
       search = '',
-      sort = 'desc',
-    } = matchedData(req) as { [key: string]: string };
-
-    const parsedLimit = Math.min(20, parseInt(limit, 10));
-    const skipPages = parsedLimit * (parseInt(page, 10) - 1);
+      order = 'desc',
+    } = matchedData(req) as {
+      limit: number;
+      page: number;
+      search: string;
+      order: 'desc' | 'asc';
+    };
 
     const usersList = await User.find({
       friendRequests: userId,
       username: { $regex: search, $options: 'i' },
     })
-      .skip(skipPages)
-      .limit(parsedLimit)
-      .sort({ createdAt: sort === 'desc' ? -1 : 1 });
+      .skip(limit * (page - 1))
+      .limit(limit)
+      .sort({ createdAt: order === 'desc' ? -1 : 1 });
 
     const requestsList = usersList.map(userDto);
 
