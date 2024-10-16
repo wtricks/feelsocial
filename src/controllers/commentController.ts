@@ -66,8 +66,8 @@ export const getComments = async (req: Request, res: Response) => {
   try {
     const comments = await Comment.find({ post: postId })
       .sort({ createdAt: order === 'desc' ? -1 : 1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+      .skip((page - 1) * +limit)
+      .limit(+limit);
     res.sendResponse(200, 'Comments fetched successfully', false, comments);
   } catch (error) {
     console.log(error);

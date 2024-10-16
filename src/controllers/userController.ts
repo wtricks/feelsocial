@@ -21,6 +21,8 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
       page: number;
     };
 
+    console.log(limit, page);
+
     const friends = (await User.findById(currentUserId))!.friends;
     const suggestedUsers = await User.aggregate([
       {
@@ -85,6 +87,12 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
         },
       },
       { $unwind: '$suggestedUsers' },
+      {
+        $project: {
+          'user.friends': 0,
+          'user.friendRequests': 0,
+        },
+      },
       // Group by user id to avoid duplicates and sum scores
       {
         $group: {
@@ -96,17 +104,12 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
       // Sort by score
       { $sort: { score: -1 } },
       // Apply pagination
-      { $skip: limit * (page - 1) },
-      { $limit: limit },
+      { $skip: +limit * (page - 1) },
+      { $limit: +limit },
     ]);
 
     if (suggestedUsers.length > 0) {
-      return res.sendResponse(
-        200,
-        'Suggested users',
-        false,
-        suggestedUsers.map((user) => userDto(user.user))
-      );
+      return res.sendResponse(200, 'Suggested users', false, suggestedUsers);
     }
 
     // If no suggestions found, fallback to random users with many friends and posts
@@ -115,15 +118,10 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
       friendRequests: { $ne: currentUserId },
     })
       .sort({ 'friends.length': -1 })
-      .skip(limit * (page - 1))
-      .limit(limit);
+      .skip(+limit * (page - 1))
+      .limit(+limit);
 
-    res.sendResponse(
-      200,
-      'Suggested users',
-      false,
-      fallbackUsers.map((user) => userDto(user))
-    );
+    res.sendResponse(200, 'Suggested users', false, fallbackUsers);
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);
@@ -299,21 +297,20 @@ export const getFriendsList = async (req: Request, res: Response) => {
       .select('friends')
       .populate({
         path: 'friends',
+        select: ['-friends', '-friendRequests'],
         match: {
           username: { $regex: search, $options: 'i' },
         },
         options: {
-          limit: limit,
-          skip: limit * (page - 1),
+          limit: +limit,
+          skip: +limit * (page - 1),
           sort: {
             createdAt: order === 'desc' ? -1 : 1,
           },
         },
       });
 
-    const friendsList = (
-      (currentUser?.friends as unknown as IUser[]) || []
-    ).map(userDto);
+    const friendsList = (currentUser?.friends as unknown as IUser[]) || [];
 
     res.sendResponse(200, 'Friends', false, friendsList);
   } catch (error) {
@@ -347,21 +344,21 @@ export const getReceivedRequests = async (req: Request, res: Response) => {
       .select('friendRequests')
       .populate({
         path: 'friendRequests',
+        select: ['-friends', '-friendRequests'],
         match: {
           username: { $regex: search, $options: 'i' },
         },
         options: {
-          limit: limit,
-          skip: limit * (page - 1),
+          limit: +limit,
+          skip: +limit * (page - 1),
           sort: {
             createdAt: order === 'desc' ? -1 : 1,
           },
         },
       });
 
-    const requestsList = (
-      (currentUser?.friendRequests as unknown as IUser[]) || []
-    ).map(userDto);
+    const requestsList =
+      (currentUser?.friendRequests as unknown as IUser[]) || [];
 
     res.sendResponse(200, 'Friend requests', false, requestsList);
   } catch (error) {
@@ -395,13 +392,12 @@ export const getSentRequests = async (req: Request, res: Response) => {
       friendRequests: userId,
       username: { $regex: search, $options: 'i' },
     })
-      .skip(limit * (page - 1))
-      .limit(limit)
+      .select(['-friends', '-friendRequests'])
+      .skip(+limit * (page - 1))
+      .limit(+limit)
       .sort({ createdAt: order === 'desc' ? -1 : 1 });
 
-    const requestsList = usersList.map(userDto);
-
-    res.sendResponse(200, 'Friend requests', false, requestsList);
+    res.sendResponse(200, 'Friend requests', false, usersList);
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);
@@ -456,13 +452,16 @@ export const updateUserById = async (req: Request, res: Response) => {
 export const getUserById = async (req: Request, res: Response) => {
   try {
     const { userId } = matchedData(req) as { userId: MongooseDocumentId };
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).select([
+      '-friends',
+      '-friendRequests',
+    ]);
 
     if (!user) {
       return res.sendResponse(404, 'User not found', true);
     }
 
-    res.sendResponse(200, 'User found', false, userDto(user));
+    res.sendResponse(200, 'User found', false, user);
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);
@@ -502,22 +501,4 @@ export const rejectFriendRequest = async (req: Request, res: Response) => {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);
   }
-};
-
-/**
- * Converts a {@link IUser} object to a simplified data transfer object.
- * @param {IUser} user The user to convert.
- * @returns {Object} The user DTO with the following properties:
- *   - `_id`: The ID of the user.
- *   - `username`: The username of the user.
- *   - `email`: The email address of the user.
- *   - `createdAt`: The date and time the user was created.
- */
-const userDto = (user: IUser): object => {
-  return {
-    _id: user._id,
-    username: user.username,
-    email: user.email,
-    createdAt: user.createdAt,
-  };
 };

@@ -89,8 +89,8 @@ export const getPosts = async (req: Request, res: Response) => {
         select: ['username', '_id'],
       })
       .sort({ createdAt: order === 'desc' ? -1 : 1 })
-      .skip(limit * (page - 1))
-      .limit(limit);
+      .skip(+limit * (page - 1))
+      .limit(+limit);
 
     // If the found posts are less than the limit, fetch from top 20 users with most friends
     if (posts.length < limit) {
@@ -108,8 +108,8 @@ export const getPosts = async (req: Request, res: Response) => {
           select: ['username', '_id'],
         })
         .sort({ createdAt: order === 'desc' ? -1 : 1 })
-        .skip(posts.length + (page - 1) * limit)
-        .limit(limit - posts.length);
+        .skip(posts.length + (page - 1) * +limit)
+        .limit(+limit - posts.length);
 
       posts = [...posts, ...additionalPosts];
     }
