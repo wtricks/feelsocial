@@ -4,10 +4,14 @@ import authMiddleware from 'middlewares/authMiddleware';
 
 import {
   acceptRequest,
+  getFriendsList,
   getReceivedRequests,
   getSentRequests,
   getSuggestUsers,
+  removeFriend,
+  removeFriendRequest,
   sendRequest,
+  updateUserById,
 } from 'controllers/userController';
 import validationMiddleware from 'middlewares/validationMiddleware';
 
@@ -18,6 +22,7 @@ const validateUserId = [
   body('userId')
     .exists()
     .withMessage('userId is required')
+    .bail()
     .isMongoId()
     .withMessage('Invalid userId format'),
   validationMiddleware,
@@ -40,7 +45,7 @@ const validateGetRequests = [
 //  @desc Get all suggested users
 //  @access Private
 userRoutes.get(
-  '/users/suggestions',
+  '/suggestions',
   authMiddleware,
   validateGetRequests,
   getSuggestUsers
@@ -50,7 +55,7 @@ userRoutes.get(
 //  @desc get all sent friend requests
 //  @access Private
 userRoutes.get(
-  '/users/sent-requests',
+  '/sent-requests',
   authMiddleware,
   validateGetRequests,
   getSentRequests
@@ -60,17 +65,22 @@ userRoutes.get(
 //  @desc get all received friend requests
 //  @access Private
 userRoutes.get(
-  '/users/received-requests',
+  '/received-requests',
   authMiddleware,
   validateGetRequests,
   getReceivedRequests
 );
 
+//  @route GET api/users
+//  @desc Get friends list
+//  @access Private
+userRoutes.get('/friends', authMiddleware, getFriendsList);
+
 //  @route POST api/users
 //  @desc Accept friend request
 //  @access Private
 userRoutes.post(
-  '/users/accept-request',
+  '/accept-request',
   authMiddleware,
   validateUserId,
   acceptRequest
@@ -79,21 +89,42 @@ userRoutes.post(
 //  @route POST api/users
 //  @desc Send friend request
 //  @access Private
-userRoutes.post(
-  '/users/send-request',
-  authMiddleware,
-  validateUserId,
-  sendRequest
-);
+userRoutes.post('/send-request', authMiddleware, validateUserId, sendRequest);
 
 //  @route DELETE api/users
 //  @desc Cancel friend request
 //  @access Private
 userRoutes.delete(
-  '/users/request',
+  '/request',
   authMiddleware,
   validateUserId,
-  sendRequest
+  removeFriendRequest
+);
+
+//  @route DELETE api/users
+//  @desc Remove friend
+//  @access Private
+userRoutes.delete('/friend', authMiddleware, validateUserId, removeFriend);
+
+userRoutes.put(
+  '/',
+  authMiddleware,
+  [
+    body('username')
+      .optional()
+      .isLength({ min: 3 })
+      .withMessage('Username must be at least 3 characters long')
+      .trim()
+      .escape(),
+
+    body('email')
+      .optional()
+      .isEmail()
+      .withMessage('Invalid email format')
+      .normalizeEmail(),
+    validationMiddleware,
+  ],
+  updateUserById
 );
 
 export default userRoutes;

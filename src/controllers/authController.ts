@@ -39,9 +39,9 @@ export const registerUser = async (req: Request, res: Response) => {
     password: string;
   };
 
-  const existingUser = await User.findOne({ email });
+  const existingUser = await User.findOne({ $or: [{ email }, { username }] });
   if (existingUser) {
-    return res.sendResponse(400, 'Email already exists', true);
+    return res.sendResponse(400, 'Username or email already exists', true);
   }
 
   const user = await User.create({ username, email, password });

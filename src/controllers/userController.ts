@@ -1,18 +1,16 @@
 import { type Request, type Response } from 'express';
 import mongoose from 'mongoose';
 
-import Comment from 'models/Comment';
-import Post, { type IPost } from 'models/Post';
 import User, { type IUser } from 'models/User';
 
 type MongooseDocumentId = mongoose.Types.ObjectId;
 
 /**
- * Suggests users for the currently logged-in user based on mutual friends,
- * post interactions (likes and comments), and other recommendations.
+ * Retrieves suggested users based on mutual friends, liked posts, and commented posts.
  *
- * @param req - The Express request object containing the current logged-in user.
- * @returns Promise<mongoose.Types.ObjectId[]> - Array of suggested user IDs
+ * @param req - The Express request object containing user information and query parameters.
+ * @param res - The response object to send back the suggested users.
+ * @returns {200} If suggested users are successfully retrieved, along with the user DTOs.
  */
 export const getSuggestUsers = async (req: Request, res: Response) => {
   const currentUserId = req.user?.id as MongooseDocumentId;
@@ -22,87 +20,98 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
   const skipPages = parsedLimit * (parseInt(page, 10) - 1);
 
   const friends = (await User.findById(currentUserId))!.friends;
-
-  const suggestedUsers: Map<
-    MongooseDocumentId,
-    { user: IUser; score: number }
-  > = new Map();
-
-  // Mutual friends
-  const mutualFriends = await User.find({
-    friends: { $in: friends },
-    _id: { $ne: currentUserId, $nin: friends },
-  });
-  mutualFriends.forEach((user) => {
-    suggestedUsers.set(user._id as MongooseDocumentId, {
-      user: user,
-      score: 10,
-    });
-  });
-
-  // Likes on posts
-  const postsLikedByCurrentUser = await Post.find({
-    likes: currentUserId,
-  })
-    .select('author')
-    .populate('author');
-
-  postsLikedByCurrentUser.forEach((post) => {
-    const authorId = (post.author as unknown as IUser)
-      ._id as MongooseDocumentId;
-    if (!friends.includes(authorId) && authorId !== currentUserId) {
-      const existing = suggestedUsers.get(authorId) || {
-        user: post.author as unknown as IUser,
-        score: 5,
-      };
-      existing.score += 5;
-      suggestedUsers.set(authorId, existing);
-    }
-  });
-
-  // Comments on posts
-  const commentsByCurrentUser = await Comment.find({
-    author: currentUserId,
-  })
-    .select('post')
-    .populate({
-      path: 'post',
-      select: 'author',
-      populate: {
-        path: 'author',
+  const suggestedUsers = await User.aggregate([
+    {
+      $facet: {
+        // Find mutual friends
+        mutualFriends: [
+          {
+            $match: {
+              friends: { $in: friends },
+              friendRequests: { $ne: currentUserId },
+              _id: { $ne: currentUserId, $nin: friends },
+            },
+          },
+          { $addFields: { score: { $literal: 10 } } },
+        ],
+        // Find users who liked the same posts
+        likedPosts: [
+          {
+            $lookup: {
+              from: 'posts',
+              localField: '_id',
+              foreignField: 'author',
+              as: 'postsLikedByCurrentUser',
+            },
+          },
+          {
+            $match: {
+              'postsLikedByCurrentUser.likes': currentUserId,
+              _id: { $ne: currentUserId, $nin: friends },
+              friendRequests: { $ne: currentUserId },
+            },
+          },
+          { $addFields: { score: { $literal: 5 } } },
+        ],
+        // Find users who commented on the same posts
+        commentedPosts: [
+          {
+            $lookup: {
+              from: 'comments',
+              localField: '_id',
+              foreignField: 'author',
+              as: 'commentsByCurrentUser',
+            },
+          },
+          {
+            $match: {
+              'commentsByCurrentUser.author': currentUserId,
+              _id: { $ne: currentUserId, $nin: friends },
+              friendRequests: { $ne: currentUserId },
+            },
+          },
+          { $addFields: { score: { $literal: 3 } } },
+        ],
       },
-    });
+    },
+    // Merge the results into one array
+    {
+      $project: {
+        suggestedUsers: {
+          $concatArrays: ['$mutualFriends', '$likedPosts', '$commentedPosts'],
+        },
+      },
+    },
+    { $unwind: '$suggestedUsers' },
+    // Group by user id to avoid duplicates and sum scores
+    {
+      $group: {
+        _id: '$suggestedUsers._id',
+        user: { $first: '$suggestedUsers' },
+        score: { $sum: '$suggestedUsers.score' },
+      },
+    },
+    // Sort by score
+    { $sort: { score: -1 } },
+    // Apply pagination
+    { $skip: skipPages },
+    { $limit: parsedLimit },
+  ]);
 
-  commentsByCurrentUser.forEach((comment) => {
-    const authorId = (
-      (comment.post as unknown as IPost).author as unknown as IUser
-    )._id as MongooseDocumentId;
-    if (!friends.includes(authorId) && authorId !== currentUserId) {
-      const existing = suggestedUsers.get(authorId) || {
-        user: (comment.post as unknown as IPost).author as unknown as IUser,
-        score: 3,
-      };
-      existing.score += 3;
-      suggestedUsers.set(authorId, existing);
-    }
-  });
-
-  if (suggestedUsers.size > 0) {
-    const sortedSuggestedUsers = Array.from(suggestedUsers.values())
-      .sort((a, b) => b.score - a.score)
-      .map((suggested) => userDto(suggested.user))
-      .slice(skipPages, skipPages + parsedLimit) as IUser[];
-
+  if (suggestedUsers.length > 0) {
     return res.sendResponse(
       200,
       'Suggested users',
       false,
-      sortedSuggestedUsers
+      suggestedUsers.map((user) => userDto(user.user))
     );
   }
 
   // If no suggestions found, fallback to random users with many friends and posts
-  const fallbackUsers = await User.find()
+  const fallbackUsers = await User.find({
+    _id: { $ne: currentUserId },
+    friendRequests: { $ne: currentUserId },
+  })
     .sort({ 'friends.length': -1 })
     .skip(skipPages)
     .limit(parsedLimit);
@@ -116,84 +125,88 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
 };
 
 /**
- * Sends a friend request to a user.
- *
- * @param req - The request object containing the user ID to send the request to
- * @param res - The response object to send back the result
- *
- * @throws {400} If the user is already in the friends list
- * @throws {400} If the friend request has already been sent
- * @throws {404} If the user does not exist
- *
- * @returns {200} If the friend request is sent successfully
+ * Sends a friend request to the given user
+ * @param req - The request object containing user information and the user to send the friend request to
+ * @param res - The response object to send back the result of the operation
+ * @throws {ForbiddenError} If the user is already in the current user's friends list or if a friend request has already been sent
  */
 export const sendRequest = async (req: Request, res: Response) => {
   const { userId } = req.body as { userId: string };
   const currentUserId = req.user?.id as MongooseDocumentId;
 
-  const user = await User.findById(userId);
-  if (!user) {
-    return res.sendResponse(404, 'User not found', true);
+  const user = await User.findOne({
+    $or: [
+      { _id: userId, friendRequests: currentUserId },
+      { _id: userId, friends: currentUserId },
+    ],
+  });
+
+  if (user) {
+    return res.sendResponse(
+      403,
+      'Either user is already in your friends list or a friend request has already been sent',
+      true
+    );
   }
 
-  if (user.friends.includes(currentUserId)) {
-    return res.sendResponse(400, 'User is already in your friends list', true);
-  }
-
-  if (user.friendRequests.includes(currentUserId)) {
-    return res.sendResponse(400, 'Friend request already sent', true);
-  }
-
-  user.friendRequests.push(currentUserId);
-  await user.save();
+  await User.updateOne(
+    { _id: userId },
+    { $addToSet: { friendRequests: currentUserId } }
+  );
 
   res.sendResponse(200, 'Friend request sent', false);
 };
 
 /**
- * Removes a user from the current user's friends list.
+ * Removes a friend from the current user's friends list.
  *
- * @param req - The request object containing the user ID to remove
- * @param res - The response object to send back the result
- *
- * @throws {400} If the user is not in the friends list
- * @throws {404} If the user does not exist
- *
- * @returns {200} If the user is successfully removed
+ * @param req - The request object containing user information and the friend to be removed
+ * @param res - The response object to send back the result of removing the friend
  */
 export const removeFriend = async (req: Request, res: Response) => {
   const { userId } = req.body as { userId: MongooseDocumentId };
   const currentUserId = req.user?.id as MongooseDocumentId;
 
-  const user = await User.findById(userId);
+  const user = await User.findOne({ _id: userId, friends: currentUserId });
   if (!user) {
-    return res.sendResponse(404, 'User not found', true);
-  }
-
-  const currentUser = (await User.findById(currentUserId))!;
-
-  if (!user.friends.includes(currentUserId)) {
     return res.sendResponse(400, 'User is not in your friends list', true);
   }
 
-  currentUser.friends = currentUser.friends.filter(
-    (friendId) => friendId !== userId
-  );
-  user.friends = user.friends.filter((friendId) => friendId !== currentUserId);
-  await currentUser.save();
-  await user.save();
+  await User.updateOne({ _id: currentUserId }, { $pull: { friends: userId } });
+  await User.updateOne({ _id: userId }, { $pull: { friends: currentUserId } });
 
   res.sendResponse(200, 'Friend removed', false);
 };
 
 /**
+ * Removes a friend request from the user's friend requests list.
+ *
+ * @param req - The request object containing user information and the friend request to be removed
+ * @param res - The response object to send back the result of removing the friend request
+ */
+export const removeFriendRequest = async (req: Request, res: Response) => {
+  const { userId } = req.body as { userId: MongooseDocumentId };
+  const currentUser = req.user?.id as MongooseDocumentId;
+
+  const user = await User.findOne({ _id: userId, friendRequests: currentUser });
+  if (!user) {
+    return res.sendResponse(400, 'Friend request not found', true);
+  }
+
+  await User.updateOne(
+    { _id: userId },
+    { $pull: { friendRequests: currentUser } }
+  );
+  res.sendResponse(200, 'Friend request removed', false);
+};
+
+/**
  * Accepts a friend request from a user.
  *
- * @param req - The request object containing the user ID to accept
- * @param res - The response object to send back the result
+ * @param req - The request object containing the user who sent the friend request
+ * @param res - The response object to send back the result of accepting the friend request
  *
  * @throws {400} If the friend request does not exist
- * @throws {404} If the user does not exist
  *
  * @returns {200} If the friend request is successfully accepted
  */
@@ -201,38 +214,38 @@ export const acceptRequest = async (req: Request, res: Response) => {
   const { userId } = req.body as { userId: MongooseDocumentId };
   const currentUserId = req.user?.id as MongooseDocumentId;
 
-  const user = await User.findById(userId);
+  const user = await User.findOne({
+    _id: currentUserId,
+    friendRequests: userId,
+  });
   if (!user) {
-    return res.sendResponse(404, 'User not found', true);
-  }
-
-  const currentUser = (await User.findById(currentUserId))!;
-  if (!currentUser.friendRequests.includes(userId)) {
     return res.sendResponse(400, 'Friend request not found', true);
   }
 
-  currentUser.friends.push(userId);
-  user.friends.push(currentUserId);
-  currentUser.friendRequests = currentUser.friendRequests.filter(
-    (friendId) => friendId !== userId
+  await User.updateOne(
+    { _id: currentUserId },
+    { $addToSet: { friends: userId }, $pull: { friendRequests: userId } }
   );
-  user.friendRequests = user.friendRequests.filter(
-    (friendId) => friendId !== currentUserId
+  await User.updateOne(
+    { _id: userId },
+    {
+      $addToSet: { friends: currentUserId },
+      $pull: { friendRequests: currentUserId },
+    }
   );
-  await currentUser.save();
-  await user.save();
 
   res.sendResponse(200, 'Friend request accepted', false);
 };
 
 /**
- * Retrieves the list of friends for the current user based on the specified query parameters.
+ * Retrieves the list of friends for the current user based on specified query parameters.
  *
  * @param req - The Express request object containing user information and query parameters.
  * @param res - The response object to send back the list of friends.
+ * @returns {200} If the friends are successfully retrieved, along with the user DTOs.
  */
 export const getFriendsList = async (req: Request, res: Response) => {
-  const userId = req.user?.id as MongooseDocumentId;
+  const userId = (req.body.userId || req.user?.id) as MongooseDocumentId;
   const {
     limit = '10',
     page = '1',
@@ -334,6 +347,33 @@ export const getSentRequests = async (req: Request, res: Response) => {
   const requestsList = usersList.map(userDto);
 
   res.sendResponse(200, 'Friend requests', false, requestsList);
+};
+
+/**
+ * Updates the user with the specified ID.
+ *
+ * @param req - The Express request object containing the user ID and update data.
+ * @param res - The response object to send back the result.
+ *
+ * @throws {404} If the user does not exist
+ *
+ * @returns {200} If the user is successfully updated
+ */
+export const updateUserById = async (req: Request, res: Response) => {
+  const userId = req.user?.id as MongooseDocumentId;
+  const { email, username } = req.body as { email: string; username: string };
+
+  const user = await User.findOne({ $or: [{ email }, { username }] });
+  if (user) {
+    return res.sendResponse(409, 'Username or email already exists', true);
+  }
+
+  const currentUser = (await User.findById(userId))!;
+  currentUser.username = req.body.username || currentUser.username;
+  currentUser.email = req.body.email || currentUser.email;
+
+  await currentUser.save();
+  res.sendResponse(200, 'User updated', false);
 };
 
 /**
