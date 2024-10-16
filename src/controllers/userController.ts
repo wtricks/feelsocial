@@ -185,7 +185,7 @@ export const removeFriend = async (req: Request, res: Response) => {
  * @param res - The response object to send back the result of removing the friend request
  */
 export const removeFriendRequest = async (req: Request, res: Response) => {
-  const { userId } = req.body as { userId: MongooseDocumentId };
+  const { userId } = req.params;
   const currentUser = req.user?.id as MongooseDocumentId;
 
   const user = await User.findOne({ _id: userId, friendRequests: currentUser });
@@ -211,7 +211,7 @@ export const removeFriendRequest = async (req: Request, res: Response) => {
  * @returns {200} If the friend request is successfully accepted
  */
 export const acceptRequest = async (req: Request, res: Response) => {
-  const { userId } = req.body as { userId: MongooseDocumentId };
+  const { userId } = req.params;
   const currentUserId = req.user?.id as MongooseDocumentId;
 
   const user = await User.findOne({

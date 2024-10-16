@@ -18,7 +18,6 @@ import validationMiddleware from 'middlewares/validationMiddleware';
 
 const userRoutes = express.Router();
 
-// Validation middleware
 const validateUserId = [
   body('userId')
     .exists()
@@ -26,6 +25,11 @@ const validateUserId = [
     .bail()
     .isMongoId()
     .withMessage('Invalid userId format'),
+  validationMiddleware,
+];
+
+const validateParamUserId = [
+  param('userId').isMongoId().withMessage('Invalid userId format'),
   validationMiddleware,
 ];
 
@@ -96,16 +100,21 @@ userRoutes.post('/send-request', authMiddleware, validateUserId, sendRequest);
 //  @desc Cancel friend request
 //  @access Private
 userRoutes.delete(
-  '/request',
+  '/request/:userId',
   authMiddleware,
-  validateUserId,
+  validateParamUserId,
   removeFriendRequest
 );
 
 //  @route DELETE api/users
 //  @desc Remove friend
 //  @access Private
-userRoutes.delete('/friend', authMiddleware, validateUserId, removeFriend);
+userRoutes.delete(
+  '/friend/:userId',
+  authMiddleware,
+  validateParamUserId,
+  removeFriend
+);
 
 userRoutes.put(
   '/',
@@ -131,19 +140,6 @@ userRoutes.put(
 //  @route GET api/users
 //  @desc Get user by ID
 //  @access Private
-userRoutes.get(
-  '/:userId',
-  authMiddleware,
-  [
-    param('userId')
-      .exists()
-      .withMessage('userId is required')
-      .bail()
-      .isMongoId()
-      .withMessage('Invalid userId format'),
-    validationMiddleware,
-  ],
-  getUserById
-);
+userRoutes.get('/:userId', authMiddleware, validateParamUserId, getUserById);
 
 export default userRoutes;
