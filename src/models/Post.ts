@@ -1,6 +1,24 @@
 import mongoose from 'mongoose';
 
-const postSchema = new mongoose.Schema(
+export interface IPost {
+  content: string;
+  author: typeof mongoose.Schema.Types.ObjectId;
+  likes: (typeof mongoose.Schema.Types.ObjectId)[];
+  comments: (typeof mongoose.Schema.Types.ObjectId)[];
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface IPostMethods {
+  addLike(userId: typeof mongoose.Schema.Types.ObjectId): Promise<boolean>;
+  removeLike(userId: typeof mongoose.Schema.Types.ObjectId): Promise<boolean>;
+  isLiked(userId: typeof mongoose.Schema.Types.ObjectId): Promise<boolean>;
+}
+
+type PostModel = mongoose.Model<IPost, object, IPostMethods>;
+
+const postSchema = new mongoose.Schema<IPost, PostModel, IPostMethods>(
   {
     content: { type: String, required: true },
     author: {
@@ -65,5 +83,5 @@ postSchema.statics.isLiked = async function (
   return this.findOne({ likes: userId, _id: postId });
 };
 
-const Post = mongoose.model('Post', postSchema);
+const Post = mongoose.model<IPost, PostModel>('Post', postSchema);
 export default Post;
