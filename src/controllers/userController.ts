@@ -21,8 +21,6 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
       page: number;
     };
 
-    console.log(limit, page);
-
     const friends = (await User.findById(currentUserId))!.friends;
     const suggestedUsers = await User.aggregate([
       {
@@ -87,18 +85,18 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
         },
       },
       { $unwind: '$suggestedUsers' },
-      {
-        $project: {
-          'user.friends': 0,
-          'user.friendRequests': 0,
-        },
-      },
       // Group by user id to avoid duplicates and sum scores
       {
         $group: {
           _id: '$suggestedUsers._id',
           user: { $first: '$suggestedUsers' },
           score: { $sum: '$suggestedUsers.score' },
+        },
+      },
+      {
+        $project: {
+          'user.friends': 0,
+          'user.friendRequests': 0,
         },
       },
       // Sort by score
@@ -117,6 +115,7 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
       _id: { $ne: currentUserId },
       friendRequests: { $ne: currentUserId },
     })
+      .select(['-friends', '-friendRequests'])
       .sort({ 'friends.length': -1 })
       .skip(+limit * (page - 1))
       .limit(+limit);
