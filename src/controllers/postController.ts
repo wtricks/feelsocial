@@ -84,6 +84,7 @@ export const getPosts = async (req: Request, res: Response) => {
       ],
       content: { $regex: search, $options: 'i' },
     })
+      .select('-likes -comments')
       .populate({
         path: 'author',
         select: ['username', '_id'],
@@ -103,6 +104,7 @@ export const getPosts = async (req: Request, res: Response) => {
         },
         content: { $regex: search, $options: 'i' },
       })
+        .select('-likes -comments')
         .populate({
           path: 'author',
           select: ['username', '_id'],
@@ -157,7 +159,7 @@ export const updatePost = async (req: Request, res: Response) => {
 
     post.content = content;
     await post.save();
-    res.sendResponse(200, 'Post updated successfully', false, post);
+    res.sendResponse(200, 'Post updated successfully', false);
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);
