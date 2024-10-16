@@ -1,5 +1,6 @@
 import { type Request, type Response } from 'express';
 import jwt from 'jsonwebtoken';
+
 import User from 'models/User';
 
 /**
@@ -12,11 +13,13 @@ export const loginUser = async (req: Request, res: Response) => {
   const { email, password } = req.body as { email: string; password: string };
 
   const user = await User.findOne({ email });
-  if (!user || !user.comparePassword(password)) {
+  if (!user || !(await user.comparePassword(password))) {
     return res.sendResponse(401, 'Invalid credentials', true);
   }
 
-  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!);
+  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!, {
+    expiresIn: '1d',
+  });
   res.sendResponse(200, 'Login successful', false, { token, user });
 };
 
@@ -42,7 +45,9 @@ export const registerUser = async (req: Request, res: Response) => {
   }
 
   const user = await User.create({ username, email, password });
-  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!);
+  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!, {
+    expiresIn: '1d',
+  });
 
   res.sendResponse(200, 'Registration successful', false, {
     token,
