@@ -1,4 +1,5 @@
 import { type Request, type Response } from 'express';
+import { matchedData } from 'express-validator';
 import jwt from 'jsonwebtoken';
 
 import User from 'models/User';
@@ -10,17 +11,25 @@ import User from 'models/User';
  * @param res - The response object to send back the token and user object
  */
 export const loginUser = async (req: Request, res: Response) => {
-  const { email, password } = req.body as { email: string; password: string };
+  try {
+    const { email, password } = matchedData(req) as {
+      email: string;
+      password: string;
+    };
 
-  const user = await User.findOne({ email });
-  if (!user || !(await user.comparePassword(password))) {
-    return res.sendResponse(401, 'Invalid credentials', true);
+    const user = await User.findOne({ email });
+    if (!user || !(await user.comparePassword(password))) {
+      return res.sendResponse(401, 'Invalid credentials', true);
+    }
+
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!, {
+      expiresIn: '1d',
+    });
+    res.sendResponse(200, 'Login successful', false, { token, user });
+  } catch (error) {
+    console.log(error);
+    res.sendResponse(500, 'Internal server error', true);
   }
-
-  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!, {
-    expiresIn: '1d',
-  });
-  res.sendResponse(200, 'Login successful', false, { token, user });
 };
 
 /**
@@ -33,26 +42,31 @@ export const loginUser = async (req: Request, res: Response) => {
  * with the newly created user and the token
  */
 export const registerUser = async (req: Request, res: Response) => {
-  const { username, email, password } = req.body as {
-    username: string;
-    email: string;
-    password: string;
-  };
+  try {
+    const { username, email, password } = matchedData(req) as {
+      email: string;
+      password: string;
+      username: string;
+    };
 
-  const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-  if (existingUser) {
-    return res.sendResponse(400, 'Username or email already exists', true);
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    if (existingUser) {
+      return res.sendResponse(400, 'Username or email already exists', true);
+    }
+
+    const user = await User.create({ username, email, password });
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!, {
+      expiresIn: '1d',
+    });
+
+    res.sendResponse(200, 'Registration successful', false, {
+      token,
+      user,
+    });
+  } catch (error) {
+    console.log(error);
+    res.sendResponse(500, 'Internal server error', true);
   }
-
-  const user = await User.create({ username, email, password });
-  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!, {
-    expiresIn: '1d',
-  });
-
-  res.sendResponse(200, 'Registration successful', false, {
-    token,
-    user,
-  });
 };
 
 /**
@@ -61,6 +75,11 @@ export const registerUser = async (req: Request, res: Response) => {
  * @param res - The response object to send back the user information
  */
 export const getCurrentLoggedInUser = async (req: Request, res: Response) => {
-  const user = await User.findById(req.user?.id);
-  res.sendResponse(200, 'User retrieved successfully', false, user);
+  try {
+    const user = await User.findById(req.user?.id);
+    res.sendResponse(200, 'User retrieved successfully', false, user);
+  } catch (error) {
+    console.log(error);
+    res.sendResponse(500, 'Internal server error', true);
+  }
 };
