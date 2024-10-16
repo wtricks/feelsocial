@@ -9,6 +9,7 @@ import {
   getSentRequests,
   getSuggestUsers,
   getUserById,
+  rejectFriendRequest,
   removeFriend,
   removeFriendRequest,
   sendRequest,
@@ -18,18 +19,8 @@ import validationMiddleware from 'middlewares/validationMiddleware';
 
 const userRoutes = express.Router();
 
-const validateUserId = [
-  body('userId')
-    .exists()
-    .withMessage('userId is required')
-    .bail()
-    .isMongoId()
-    .withMessage('Invalid userId format'),
-  validationMiddleware,
-];
-
 const validateParamUserId = [
-  param('userId').isMongoId().withMessage('Invalid userId format'),
+  param('userId').isMongoId().withMessage('Invalid userId format').escape(),
   validationMiddleware,
 ];
 
@@ -38,7 +29,11 @@ const validateGetRequests = [
     .optional()
     .isInt({ min: 1 })
     .withMessage('Limit must be a positive integer'),
-  query('search').optional().isString().withMessage('Search must be a string'),
+  query('search')
+    .optional()
+    .isString()
+    .withMessage('Search must be a string')
+    .escape(),
   query('page')
     .optional()
     .isInt({ min: 1 })
@@ -85,16 +80,21 @@ userRoutes.get('/friends', authMiddleware, getFriendsList);
 //  @desc Accept friend request
 //  @access Private
 userRoutes.post(
-  '/accept-request',
+  '/accept-request/:userId',
   authMiddleware,
-  validateUserId,
+  validateParamUserId,
   acceptRequest
 );
 
 //  @route POST api/users
 //  @desc Send friend request
 //  @access Private
-userRoutes.post('/send-request', authMiddleware, validateUserId, sendRequest);
+userRoutes.post(
+  '/send-request/:userId',
+  authMiddleware,
+  validateParamUserId,
+  sendRequest
+);
 
 //  @route DELETE api/users
 //  @desc Cancel friend request
@@ -114,6 +114,16 @@ userRoutes.delete(
   authMiddleware,
   validateParamUserId,
   removeFriend
+);
+
+//  @route DELETE api/users
+//  @desc Reject friend request
+//  @access Private
+userRoutes.post(
+  '/reject-request/:userId',
+  authMiddleware,
+  validateParamUserId,
+  rejectFriendRequest
 );
 
 userRoutes.put(

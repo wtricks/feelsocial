@@ -20,7 +20,11 @@ const validateGetRequests = [
     .optional()
     .isInt({ min: 1 })
     .withMessage('Limit must be a positive integer'),
-  query('search').optional().isString().withMessage('Search must be a string'),
+  query('search')
+    .optional()
+    .isString()
+    .withMessage('Search must be a string')
+    .escape(),
   query('page')
     .optional()
     .isInt({ min: 1 })
@@ -29,7 +33,7 @@ const validateGetRequests = [
 ];
 
 const validateParamPostId = [
-  param('postId').isMongoId().withMessage('Invalid postId format'),
+  param('postId').isMongoId().withMessage('Invalid postId format').escape(),
   validationMiddleware,
 ];
 

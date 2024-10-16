@@ -1,4 +1,5 @@
 import { type Request, type Response } from 'express';
+import { matchedData } from 'express-validator';
 import mongoose from 'mongoose';
 
 import User, { type IUser } from 'models/User';
@@ -15,7 +16,9 @@ type MongooseDocumentId = mongoose.Types.ObjectId;
 export const getSuggestUsers = async (req: Request, res: Response) => {
   try {
     const currentUserId = req.user?.id as MongooseDocumentId;
-    const { limit = '10', page = '1' } = req.query as { [key: string]: string };
+    const { limit = '10', page = '1' } = matchedData(req) as {
+      [key: string]: string;
+    };
 
     const parsedLimit = Math.min(20, parseInt(limit, 10));
     const skipPages = parsedLimit * (parseInt(page, 10) - 1);
@@ -137,7 +140,7 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
  */
 export const sendRequest = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.body as { userId: string };
+    const { userId } = matchedData(req) as { userId: string };
     const currentUserId = req.user?.id as MongooseDocumentId;
 
     const user = await User.findOne({
@@ -175,7 +178,7 @@ export const sendRequest = async (req: Request, res: Response) => {
  */
 export const removeFriend = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.body as { userId: MongooseDocumentId };
+    const { userId } = matchedData(req) as { userId: MongooseDocumentId };
     const currentUserId = req.user?.id as MongooseDocumentId;
 
     const user = await User.findOne({ _id: userId, friends: currentUserId });
@@ -207,7 +210,7 @@ export const removeFriend = async (req: Request, res: Response) => {
  */
 export const removeFriendRequest = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const { userId } = matchedData(req) as { userId: MongooseDocumentId };
     const currentUser = req.user?.id as MongooseDocumentId;
 
     const user = await User.findOne({
@@ -241,7 +244,7 @@ export const removeFriendRequest = async (req: Request, res: Response) => {
  */
 export const acceptRequest = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const { userId } = matchedData(req) as { userId: MongooseDocumentId };
     const currentUserId = req.user?.id as MongooseDocumentId;
 
     const user = await User.findOne({
@@ -280,13 +283,14 @@ export const acceptRequest = async (req: Request, res: Response) => {
  */
 export const getFriendsList = async (req: Request, res: Response) => {
   try {
-    const userId = (req.body.userId || req.user?.id) as MongooseDocumentId;
+    const userId = (matchedData(req).userId ||
+      req.user?.id) as MongooseDocumentId;
     const {
       limit = '10',
       page = '1',
       search = '',
       sort = 'desc',
-    } = req.query as { [key: string]: string };
+    } = matchedData(req) as { [key: string]: string };
 
     const parsedLimit = Math.min(20, parseInt(limit, 10));
     const skipPages = parsedLimit * (parseInt(page, 10) - 1);
@@ -331,7 +335,7 @@ export const getReceivedRequests = async (req: Request, res: Response) => {
       page = '1',
       search = '',
       sort = 'desc',
-    } = req.query as { [key: string]: string };
+    } = matchedData(req) as { [key: string]: string };
 
     const parsedLimit = Math.min(20, parseInt(limit, 10));
     const skipPages = parsedLimit * (parseInt(page, 10) - 1);
@@ -376,7 +380,7 @@ export const getSentRequests = async (req: Request, res: Response) => {
       page = '1',
       search = '',
       sort = 'desc',
-    } = req.query as { [key: string]: string };
+    } = matchedData(req) as { [key: string]: string };
 
     const parsedLimit = Math.min(20, parseInt(limit, 10));
     const skipPages = parsedLimit * (parseInt(page, 10) - 1);
@@ -411,7 +415,10 @@ export const getSentRequests = async (req: Request, res: Response) => {
 export const updateUserById = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id as MongooseDocumentId;
-    const { email, username } = req.body as { email: string; username: string };
+    const { email, username } = matchedData(req) as {
+      email: string;
+      username: string;
+    };
 
     const user = await User.findOne({ $or: [{ email }, { username }] });
     if (user) {
@@ -419,8 +426,8 @@ export const updateUserById = async (req: Request, res: Response) => {
     }
 
     const currentUser = (await User.findById(userId))!;
-    currentUser.username = req.body.username || currentUser.username;
-    currentUser.email = req.body.email || currentUser.email;
+    currentUser.username = username || currentUser.username;
+    currentUser.email = email || currentUser.email;
 
     await currentUser.save();
     res.sendResponse(200, 'User updated', false);
@@ -442,7 +449,7 @@ export const updateUserById = async (req: Request, res: Response) => {
  */
 export const getUserById = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const { userId } = matchedData(req) as { userId: MongooseDocumentId };
     const user = await User.findById(userId);
 
     if (!user) {
@@ -450,6 +457,41 @@ export const getUserById = async (req: Request, res: Response) => {
     }
 
     res.sendResponse(200, 'User found', false, userDto(user));
+  } catch (error) {
+    console.log(error);
+    res.sendResponse(500, 'Internal server error', true);
+  }
+};
+
+/**
+ * Rejects a friend request from another user.
+ *
+ * @param req - The Express request object containing the ID of the user who sent the friend request.
+ * @param res - The response object to send back the result of rejecting the friend request.
+ *
+ * @throws {400} If the friend request does not exist
+ *
+ * @returns {200} If the friend request is successfully rejected
+ */
+export const rejectFriendRequest = async (req: Request, res: Response) => {
+  try {
+    const { userId } = matchedData(req) as { userId: MongooseDocumentId };
+    const currentUserId = req.user?.id as MongooseDocumentId;
+
+    const user = await User.findOne({
+      _id: currentUserId,
+      friendRequests: userId,
+    });
+    if (!user) {
+      return res.sendResponse(400, 'Friend request not found', true);
+    }
+
+    await User.updateOne(
+      { _id: currentUserId },
+      { $pull: { friendRequests: userId } }
+    );
+
+    res.sendResponse(200, 'Friend request rejected', false);
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);

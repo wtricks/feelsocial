@@ -49,7 +49,7 @@ export const getPosts = async (req: Request, res: Response) => {
     page = '1',
     search = '',
     sort = 'desc',
-  } = req.query as { [key: string]: string };
+  } = matchedData(req) as { [key: string]: string };
 
   const parsedLimit = Math.min(20, parseInt(limit, 10));
   const skipPages = parsedLimit * (parseInt(page, 10) - 1);
@@ -137,8 +137,10 @@ export const getPosts = async (req: Request, res: Response) => {
  */
 export const updatePost = async (req: Request, res: Response) => {
   try {
-    const postId = req.params.postId;
-    const { content } = matchedData(req) as { content: string };
+    const { content, postId } = matchedData(req) as {
+      content: string;
+      postId: string;
+    };
 
     if (!content) {
       res.status(400).json({ message: 'Content is required' });
@@ -172,7 +174,7 @@ export const updatePost = async (req: Request, res: Response) => {
  */
 export const deletePost = async (req: Request, res: Response) => {
   try {
-    const postId = req.params.postId;
+    const postId = matchedData(req).postId as MongooseDocumentId;
     const currentUser = req.user?.id as MongooseDocumentId;
     const post = await Post.findOne({ _id: postId, author: currentUser });
     if (!post) {
@@ -200,7 +202,7 @@ export const deletePost = async (req: Request, res: Response) => {
  */
 export const getPostById = async (req: Request, res: Response) => {
   try {
-    const postId = req.params.postId;
+    const postId = matchedData(req).postId as MongooseDocumentId;
     const post = await Post.findById(postId)
       .populate({
         path: 'author',
@@ -230,7 +232,7 @@ export const getPostById = async (req: Request, res: Response) => {
  */
 export const likePost = async (req: Request, res: Response) => {
   try {
-    const postId = req.params.postId;
+    const postId = matchedData(req).postId as MongooseDocumentId;
     const userId = req.user?.id as MongooseDocumentId;
 
     const post = await Post.findOne({ _id: postId });
@@ -265,7 +267,7 @@ export const likePost = async (req: Request, res: Response) => {
  */
 export const getPostLikedUsers = async (req: Request, res: Response) => {
   try {
-    const postId = req.params.postId;
+    const postId = matchedData(req).postId as MongooseDocumentId;
     const post = await Post.findById(postId)
       .select('likes')
       .populate({
