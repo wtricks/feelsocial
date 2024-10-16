@@ -9,6 +9,7 @@ import { connectDB } from 'config/db';
 import responseMiddleware from 'middlewares/responseMiddleware';
 
 import authRoutes from 'routes/authRoutes';
+import postRoutes from 'routes/postRoutes';
 import userRoutes from 'routes/userRoutes';
 
 dotenv.config({
@@ -46,6 +47,7 @@ app.get('/', (_req, res) => {
 // APIs
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/posts', postRoutes);
 
 connectDB().then(() => {
   app.listen(process.env.PORT, () => {

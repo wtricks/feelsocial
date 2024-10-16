@@ -266,15 +266,17 @@ export const likePost = async (req: Request, res: Response) => {
 export const getPostLikedUsers = async (req: Request, res: Response) => {
   try {
     const postId = req.params.postId;
-    const post = await Post.findById(postId).populate({
-      path: 'likes',
-      select: ['username', '_id'],
-    });
+    const post = await Post.findById(postId)
+      .select('likes')
+      .populate({
+        path: 'likes',
+        select: ['username', '_id'],
+      });
     if (!post) {
       res.status(404).json({ message: 'Post not found' });
       return;
     }
-    res.sendResponse(200, 'Post retrieved successfully', false, post);
+    res.sendResponse(200, 'Post retrieved successfully', false, post.likes);
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);

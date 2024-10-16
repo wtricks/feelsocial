@@ -2,6 +2,7 @@ import express from 'express';
 import { body, param, query } from 'express-validator';
 
 import {
+  createPost,
   deletePost,
   getPostById,
   getPostLikedUsers,
@@ -28,7 +29,7 @@ const validateGetRequests = [
 ];
 
 const validateParamPostId = [
-  param('userId').isMongoId().withMessage('Invalid userId format'),
+  param('postId').isMongoId().withMessage('Invalid postId format'),
   validationMiddleware,
 ];
 
@@ -55,7 +56,7 @@ postRoutes.get('/:postId', authMiddleware, validateParamPostId, getPostById);
 //  @route POST api/posts
 //  @desc Create new post
 //  @access Private
-postRoutes.post('/', authMiddleware, validateContent, getPostById);
+postRoutes.post('/', authMiddleware, validateContent, createPost);
 
 //  @route PUT api/posts
 //  @desc Update post
@@ -83,6 +84,9 @@ postRoutes.get(
   getPostLikedUsers
 );
 
-postRoutes.post('like/:postId', authMiddleware, validateParamPostId, likePost);
+//  @route POST api/posts
+//  @desc Like post
+//  @access Private
+postRoutes.post('/like/:postId', authMiddleware, validateParamPostId, likePost);
 
 export default postRoutes;
