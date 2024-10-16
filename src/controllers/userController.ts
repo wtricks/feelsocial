@@ -377,6 +377,27 @@ export const updateUserById = async (req: Request, res: Response) => {
 };
 
 /**
+ * Retrieves a user by ID.
+ *
+ * @param req - The Express request object containing the user ID as a parameter.
+ * @param res - The response object to send back the user information.
+ *
+ * @throws {404} If the user does not exist
+ *
+ * @returns {200} If the user is successfully retrieved
+ */
+export const getUserById = async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const user = await User.findById(userId);
+
+  if (!user) {
+    return res.sendResponse(404, 'User not found', true);
+  }
+
+  res.sendResponse(200, 'User found', false, userDto(user));
+};
+
+/**
  * Converts a {@link IUser} object to a simplified data transfer object.
  * @param {IUser} user The user to convert.
  * @returns {Object} The user DTO with the following properties:

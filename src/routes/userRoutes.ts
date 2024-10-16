@@ -1,5 +1,5 @@
 import express from 'express';
-import { body, query } from 'express-validator';
+import { body, param, query } from 'express-validator';
 import authMiddleware from 'middlewares/authMiddleware';
 
 import {
@@ -8,6 +8,7 @@ import {
   getReceivedRequests,
   getSentRequests,
   getSuggestUsers,
+  getUserById,
   removeFriend,
   removeFriendRequest,
   sendRequest,
@@ -125,6 +126,24 @@ userRoutes.put(
     validationMiddleware,
   ],
   updateUserById
+);
+
+//  @route GET api/users
+//  @desc Get user by ID
+//  @access Private
+userRoutes.get(
+  '/:userId',
+  authMiddleware,
+  [
+    param('userId')
+      .exists()
+      .withMessage('userId is required')
+      .bail()
+      .isMongoId()
+      .withMessage('Invalid userId format'),
+    validationMiddleware,
+  ],
+  getUserById
 );
 
 export default userRoutes;
