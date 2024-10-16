@@ -9,6 +9,7 @@ import { connectDB } from 'config/db';
 import responseMiddleware from 'middlewares/responseMiddleware';
 
 import authRoutes from 'routes/authRoutes';
+import commentRouts from 'routes/commentRoutes';
 import postRoutes from 'routes/postRoutes';
 import userRoutes from 'routes/userRoutes';
 
@@ -48,6 +49,7 @@ app.get('/', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/comments', commentRouts);
 
 connectDB().then(() => {
   app.listen(process.env.PORT, () => {
