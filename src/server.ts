@@ -6,6 +6,9 @@ import path from 'path';
 
 import { ROOT } from 'config/constants';
 import { connectDB } from 'config/db';
+import responseMiddleware from 'middlewares/responseMiddleware';
+
+import authRoutes from 'routes/authRoutes';
 
 dotenv.config({
   path: `.env.${process.env.NODE_ENV}`,
@@ -29,6 +32,7 @@ app.use(
 app.use(express.json());
 app.use(limiter);
 app.disable('x-powered-by');
+app.use(responseMiddleware);
 
 // Static files
 app.use('/uploads', express.static(path.join(ROOT, 'uploads')));
@@ -37,6 +41,9 @@ app.use('/uploads', express.static(path.join(ROOT, 'uploads')));
 app.get('/', (_req, res) => {
   res.send('Social Media Server - Backend');
 });
+
+// APIs
+app.use('/api/auth', authRoutes);
 
 connectDB().then(() => {
   app.listen(process.env.PORT, () => {
