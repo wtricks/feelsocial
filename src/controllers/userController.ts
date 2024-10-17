@@ -327,7 +327,7 @@ export const getFriendsList = async (req: Request, res: Response) => {
       .select('friends')
       .populate({
         path: 'friends',
-        select: ['-friends', '-friendRequests'],
+        select: ['-friendRequests'],
         match: {
           username: { $regex: search, $options: 'i' },
         },
@@ -340,7 +340,15 @@ export const getFriendsList = async (req: Request, res: Response) => {
         },
       });
 
-    const friendsList = (currentUser?.friends as unknown as IUser[]) || [];
+    const friendsList = (
+      (currentUser?.friends as unknown as IUser[]) || []
+    ).map((friend) => {
+      return {
+        ...friend,
+        friendsCount: friend.friends.length,
+        friends: undefined,
+      };
+    });
 
     res.sendResponse(200, 'Friends', false, friendsList);
   } catch (error) {
@@ -374,7 +382,7 @@ export const getReceivedRequests = async (req: Request, res: Response) => {
       .select('friendRequests')
       .populate({
         path: 'friendRequests',
-        select: ['-friends', '-friendRequests'],
+        select: ['-friendRequests'],
         match: {
           username: { $regex: search, $options: 'i' },
         },
@@ -387,8 +395,15 @@ export const getReceivedRequests = async (req: Request, res: Response) => {
         },
       });
 
-    const requestsList =
-      (currentUser?.friendRequests as unknown as IUser[]) || [];
+    const requestsList = (
+      (currentUser?.friendRequests as unknown as IUser[]) || []
+    ).map((friend) => {
+      return {
+        ...friend,
+        friendsCount: friend.friends.length,
+        friends: undefined,
+      };
+    });
 
     res.sendResponse(200, 'Friend requests', false, requestsList);
   } catch (error) {
@@ -422,12 +437,23 @@ export const getSentRequests = async (req: Request, res: Response) => {
       friendRequests: userId,
       username: { $regex: search, $options: 'i' },
     })
-      .select(['-friends', '-friendRequests'])
+      .select(['-friendRequests'])
       .skip(+limit * (page - 1))
       .limit(+limit)
       .sort({ createdAt: order === 'desc' ? -1 : 1 });
 
-    res.sendResponse(200, 'Friend requests', false, usersList);
+    res.sendResponse(
+      200,
+      'Friend requests',
+      false,
+      usersList.map((friend) => {
+        return {
+          ...friend,
+          friendsCount: friend.friends.length,
+          friends: undefined,
+        };
+      })
+    );
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);
@@ -491,7 +517,11 @@ export const getUserById = async (req: Request, res: Response) => {
       return res.sendResponse(404, 'User not found', true);
     }
 
-    res.sendResponse(200, 'User found', false, user);
+    res.sendResponse(200, 'User found', false, {
+      ...user,
+      friendsCount: user.friends.length,
+      friendRequestsCount: user.friendRequests.length,
+    });
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);
