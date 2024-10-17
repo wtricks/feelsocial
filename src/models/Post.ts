@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-export interface IPost {
+export interface IPost extends mongoose.Document {
   content: string;
   author: typeof mongoose.Schema.Types.ObjectId;
   likes: (typeof mongoose.Schema.Types.ObjectId)[];

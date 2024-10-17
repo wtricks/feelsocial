@@ -8,6 +8,7 @@
     "start": "tsx watch -r tsconfig-paths/register src/server.ts",
     "build": "rimraf dist && tsc && tsc-alias && node scripts/addJsExtention.js",
     "ts.check": "tsc --project tsconfig.json",
+    "seed": "tsx src/dummydata/seed.ts",
     "add-build": "git add dist",
     "lint": "eslint . --ext .js,.ts",
     "lint:fix": "eslint . --ext .js,.ts --fix",
