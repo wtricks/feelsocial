@@ -94,6 +94,11 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
         },
       },
       {
+        $addFields: {
+          friendsCount: { $size: '$user.friends' },
+        },
+      },
+      {
         $project: {
           'user.friends': 0,
           'user.friendRequests': 0,
@@ -106,21 +111,47 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
       { $limit: +limit },
     ]);
 
-    if (suggestedUsers.length > 0) {
-      return res.sendResponse(200, 'Suggested users', false, suggestedUsers);
+    const fetchedUsersCount = (page - 1) * limit;
+    const remaining = limit - suggestedUsers.length;
+
+    if (remaining > 0) {
+      const randomUsers = await User.aggregate([
+        {
+          $match: {
+            _id: { $ne: new mongoose.Types.ObjectId(currentUserId) },
+            friendRequests: { $ne: new mongoose.Types.ObjectId(currentUserId) },
+          },
+        },
+        {
+          $addFields: {
+            friendsCount: { $size: '$friends' },
+          },
+        },
+        {
+          $project: {
+            friends: 0,
+            friendRequests: 0,
+            password: 0,
+          },
+        },
+        {
+          $sort: { friendsCount: -1 },
+        },
+        {
+          $skip: Math.max(fetchedUsersCount - suggestedUsers.length, 0),
+        },
+        {
+          $limit: remaining,
+        },
+      ]);
+
+      return res.sendResponse(200, 'Suggested users', false, [
+        ...suggestedUsers.map(({ user }) => user),
+        ...randomUsers,
+      ]);
     }
 
-    // If no suggestions found, fallback to random users with many friends and posts
-    const fallbackUsers = await User.find({
-      _id: { $ne: currentUserId },
-      friendRequests: { $ne: currentUserId },
-    })
-      .select(['-friends', '-friendRequests'])
-      .sort({ 'friends.length': -1 })
-      .skip(+limit * (page - 1))
-      .limit(+limit);
-
-    res.sendResponse(200, 'Suggested users', false, fallbackUsers);
+    res.sendResponse(200, 'Suggested users', false, suggestedUsers);
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);

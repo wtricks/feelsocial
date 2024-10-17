@@ -11,7 +11,7 @@ FeelSocial is a social media backend API built using **Express**, **MongoDB**, *
   - [Installation](#installation)
   - [Environment Variables](#environment-variables)
   - [API Endpoints](#api-endpoints)
-    - [**Authentication**](#authentication)
+    - [Authentication](#authentication)
     - [Posts](#posts)
     - [Friends](#friends)
     - [Comments](#comments)
@@ -74,7 +74,7 @@ PORT=5000
 
 ## API Endpoints
 
-### **Authentication**
+### Authentication
 
 - **Register**
 
@@ -121,33 +121,116 @@ PORT=5000
 
 - **Update Post**
 
-  - `PUT`
+  - `PUT /api/posts/:postId`
+  - Request body:
+
+    ```json
+    {
+      content: string
+    }
+    ```
 
 - **Like/Unlike Post**
 
   - `POST /api/posts/:postId/like`
 
-    ```
+- **Get Users who liked post**
 
-    ```
+  - `GET /api/posts/:postId/likes`
+
+- **Delete Post**
+
+  - `DELETE /api/posts/:postId`
+
+- **Get Post By ID**
+  - `GET /api/posts/:postId`
 
 ### Friends
 
-- **Add Friend**
+- **Get Suggestions**
 
-  - `POST /api/friends/:userId`
+  - `GET /api/users/suggestions`
+  - Query params: `?limit=number&page=number`
+
+- **Send Friend Request**
+
+  - `POST /api/users/send-request/:userId`
+
+- **Cancel Friend Request**
+
+  - `DELETE /api/users/request/:userId`
+
+- **Accept Friend Request**
+
+  - `POST /api/users/accept-request/:userId`
+
+- **Reject Friend Request**
+
+  - `POST /api/users/reject-request/:userId`
 
 - **Remove Friend**
-  - `DELETE /api/friends/:userId`
+
+  - `DELETE /api/users/friend/:userId`
+
+- **Sent Friend Request List**
+
+  - `GET /api/users/sent-requests`
+  - Query params: `?limit=number&page=number&search=string&order=asc|desc`
+
+- **Recieved Friend Request List**
+
+  - `GET /api/users/received-requests`
+  - Query params: `?limit=number&page=number&search=string&order=asc|desc`
+
+- **Friend List**
+
+  - `GET /api/users/friends`
+  - Query params: `?limit=number&page=number&search=string&order=asc|desc`
+
+- **Update Current User**
+
+  - `PUT /api/users/`
+  - Request body:
+
+    ```json
+    {
+      "email": string,
+      "username": string
+    }
+    ```
 
 ### Comments
 
 - **Get Comments**
 
-  - `GET /api/posts/:postId/comments`
+  - `GET /api/comments/:postId`
+  - Query Params: `?limit=number&page=number&order=asc|desc`
 
 - **Delete Comment**
+
   - `DELETE /api/comments/:commentId`
+
+- **Create Comment**
+
+  - `POST /api/comments/:postId`
+  - Request Body:
+
+    ```json
+    {
+      content: string
+    }
+    ```
+
+- **Update Comment**
+
+  - `PUT /api/comments/:commentId`
+  - Request body:
+
+    ```json
+    {
+      content: string
+    }
+    ```
 
 ## License
 

@@ -86,10 +86,10 @@ postRoutes.put(
 postRoutes.delete('/:postId', authMiddleware, validateParamPostId, deletePost);
 
 //  @route GET api/posts
-//  @desc Get post by ID
+//  @desc Get post'likes by ID
 //  @access Private
 postRoutes.get(
-  '/like/:postId',
+  '/:postId/likes',
   authMiddleware,
   validateParamPostId,
   getPostLikedUsers
@@ -98,6 +98,6 @@ postRoutes.get(
 //  @route POST api/posts
 //  @desc Like post
 //  @access Private
-postRoutes.post('/like/:postId', authMiddleware, validateParamPostId, likePost);
+postRoutes.post('/:postId/like', authMiddleware, validateParamPostId, likePost);
 
 export default postRoutes;

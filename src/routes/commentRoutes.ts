@@ -1,5 +1,5 @@
 import express from 'express';
-import { body, param } from 'express-validator';
+import { body, param, query } from 'express-validator';
 
 import {
   createComment,
@@ -24,6 +24,22 @@ const validateContent = [
   validationMiddleware,
 ];
 
+const validateQueryParam = [
+  query('limit')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Limit must be a positive integer'),
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer'),
+  query('order')
+    .optional()
+    .isIn(['asc', 'desc'])
+    .withMessage('Order must be asc or desc'),
+  validationMiddleware,
+];
+
 const validateCommentParam = [
   param('commentId').isMongoId().withMessage('Invalid postId format'),
   validationMiddleware,
@@ -37,7 +53,13 @@ const validatePostParam = [
 //  @route GET api/comments
 //  @desc Get comments
 //  @access Private
-commentRouts.get('/:postId', authMiddleware, validatePostParam, getComments);
+commentRouts.get(
+  '/:postId',
+  authMiddleware,
+  validatePostParam,
+  validateQueryParam,
+  getComments
+);
 
 //  @route PUT api/comments
 //  @desc Update comment
