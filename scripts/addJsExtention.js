@@ -6,7 +6,7 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 const directoryPath = path.join(__dirname, '../dist');
 
 function addJsExtensions(dirPath) {
-  if (!fs.existsSync(directoryPath)) {
+  if (!fs.existsSync(dirPath)) {
     console.error(`Directory does not exist: ${directoryPath}`);
     process.exit(1);
   }
