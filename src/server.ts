@@ -14,9 +14,7 @@ import commentRouts from 'routes/commentRoutes';
 import postRoutes from 'routes/postRoutes';
 import userRoutes from 'routes/userRoutes';
 
-dotenv.config({
-  path: `.env.${process.env.NODE_ENV}`,
-});
+dotenv.config();
 
 const app = express();
 const limiter = rateLimiter({
