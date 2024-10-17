@@ -8,6 +8,7 @@ import { ROOT } from 'config/constants';
 import { connectDB } from 'config/db';
 import responseMiddleware from 'middlewares/responseMiddleware';
 
+import swaggerDocs from 'config/swagger';
 import authRoutes from 'routes/authRoutes';
 import commentRouts from 'routes/commentRoutes';
 import postRoutes from 'routes/postRoutes';
@@ -55,4 +56,7 @@ connectDB().then(() => {
   app.listen(process.env.PORT, () => {
     console.log(`Server running on port ${process.env.PORT}`);
   });
+
+  // Swagger Docs
+  swaggerDocs(app);
 });

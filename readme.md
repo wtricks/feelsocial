@@ -119,19 +119,16 @@ PORT=5000
   - `GET /api/posts`
   - Query params: `?limit=number&page=number&order=desc|asc&search=string`
 
+- **Update Post**
+
+  - `PUT`
+
 - **Like/Unlike Post**
 
   - `POST /api/posts/:postId/like`
 
-- **Comment on Post**
+    ```
 
-  - `POST /api/posts/:postId/comment`
-  - Request body:
-
-    ```json
-    {
-      "text": "string"
-    }
     ```
 
 ### Friends

@@ -34,10 +34,13 @@ const validateGetRequests = [
     .isString()
     .withMessage('Search must be a string')
     .escape(),
-  query('page')
+  query('order')
     .optional()
-    .isInt({ min: 1 })
-    .withMessage('Page must be a positive integer'),
+    .isString()
+    .withMessage('Order must be a string')
+    .bail()
+    .isIn(['asc', 'desc'])
+    .withMessage('Order must be either "asc" or "desc"'),
   validationMiddleware,
 ];
 
