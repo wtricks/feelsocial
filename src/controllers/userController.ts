@@ -344,7 +344,7 @@ export const getFriendsList = async (req: Request, res: Response) => {
       (currentUser?.friends as unknown as IUser[]) || []
     ).map((friend) => {
       return {
-        ...friend,
+        ...friend.toJSON(),
         friendsCount: friend.friends.length,
         friends: undefined,
       };
@@ -399,7 +399,7 @@ export const getReceivedRequests = async (req: Request, res: Response) => {
       (currentUser?.friendRequests as unknown as IUser[]) || []
     ).map((friend) => {
       return {
-        ...friend,
+        ...friend.toJSON(),
         friendsCount: friend.friends.length,
         friends: undefined,
       };
@@ -448,7 +448,7 @@ export const getSentRequests = async (req: Request, res: Response) => {
       false,
       usersList.map((friend) => {
         return {
-          ...friend,
+          ...friend.toJSON(),
           friendsCount: friend.friends.length,
           friends: undefined,
         };
@@ -508,19 +508,16 @@ export const updateUserById = async (req: Request, res: Response) => {
 export const getUserById = async (req: Request, res: Response) => {
   try {
     const { userId } = matchedData(req) as { userId: MongooseDocumentId };
-    const user = await User.findById(userId).select([
-      '-friends',
-      '-friendRequests',
-    ]);
+    const user = await User.findById(userId).select(['-friendRequests']);
 
     if (!user) {
       return res.sendResponse(404, 'User not found', true);
     }
 
     res.sendResponse(200, 'User found', false, {
-      ...user,
+      ...user.toJSON(),
       friendsCount: user.friends.length,
-      friendRequestsCount: user.friendRequests.length,
+      friends: undefined,
     });
   } catch (error) {
     console.log(error);
