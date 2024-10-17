@@ -81,11 +81,11 @@ PORT=5000
   - `POST /api/auth/register`
   - Request body:
 
-    ```json
+    ```ts
     {
-      "username": "string",
-      "email": "string",
-      "password": "string"
+      username: string,
+      email: string,
+      password: string
     }
     ```
 
@@ -94,10 +94,10 @@ PORT=5000
   - `POST /api/auth/login`
   - Request body:
 
-    ```json
+    ```ts
     {
-      "email": "string",
-      "password": "string"
+      email: string;
+      password: string;
     }
     ```
 
@@ -108,9 +108,9 @@ PORT=5000
   - `POST /api/posts`
   - Request body:
 
-    ```json
+    ```ts
     {
-      "content": "string"
+      content: string;
     }
     ```
 
@@ -124,9 +124,9 @@ PORT=5000
   - `PUT /api/posts/:postId`
   - Request body:
 
-    ```json
+    ```ts
     {
-      content: string
+      content: string;
     }
     ```
 
@@ -192,10 +192,10 @@ PORT=5000
   - `PUT /api/users/`
   - Request body:
 
-    ```json
+    ```ts
     {
-      "email": string,
-      "username": string
+      email?: string
+      username?: string
     }
     ```
 
@@ -215,9 +215,9 @@ PORT=5000
   - `POST /api/comments/:postId`
   - Request Body:
 
-    ```json
+    ```ts
     {
-      content: string
+      content: string;
     }
     ```
 
@@ -226,9 +226,9 @@ PORT=5000
   - `PUT /api/comments/:commentId`
   - Request body:
 
-    ```json
+    ```ts
     {
-      content: string
+      content: string;
     }
     ```
 
