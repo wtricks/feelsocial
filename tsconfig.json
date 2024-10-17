@@ -25,7 +25,10 @@
     "removeComments": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
-    "baseUrl": "./src"
+    "baseUrl": ".",
+    "paths": {
+      "*": ["src/*"]
+    }
   },
   "include": ["src/**/*.ts", "express.d.ts"],
   "exclude": ["node_modules", "dist"]

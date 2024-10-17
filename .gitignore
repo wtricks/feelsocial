@@ -7,8 +7,6 @@ yarn-error.log*
 # TypeScript compiled files
 dist/
 build/
-*.js
-*.js.map
 
 # TypeScript specific files
 *.d.ts
@@ -16,8 +14,6 @@ build/
 
 # Environment variables
 .env
-.env.development
-.env.production
 
 # Logs
 logs
@@ -40,3 +36,5 @@ Thumbs.db
 
 # Coverage directory used by tools like istanbul
 coverage/
+
+.vercel
