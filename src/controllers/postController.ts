@@ -4,6 +4,7 @@ import { matchedData } from 'express-validator';
 import Comment from 'models/Comment';
 import Post from 'models/Post';
 import User from 'models/User';
+import mongoose from 'mongoose';
 
 type MongooseDocumentId = string;
 
@@ -84,7 +85,6 @@ export const getPosts = async (req: Request, res: Response) => {
       ],
       content: { $regex: search, $options: 'i' },
     })
-      .select('-likes -comments')
       .populate({
         path: 'author',
         select: ['username', '_id'],
@@ -104,7 +104,6 @@ export const getPosts = async (req: Request, res: Response) => {
         },
         content: { $regex: search, $options: 'i' },
       })
-        .select('-likes -comments')
         .populate({
           path: 'author',
           select: ['username', '_id'],
@@ -121,7 +120,14 @@ export const getPosts = async (req: Request, res: Response) => {
       return res.sendResponse(204, 'No posts found', false, []);
     }
 
-    res.sendResponse(200, 'Posts retrieved successfully', false, posts);
+    const userDocId = new mongoose.Types.ObjectId(userId);
+
+    res.sendResponse(
+      200,
+      'Posts retrieved successfully',
+      false,
+      posts.map((p) => postDto(p, userDocId))
+    );
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);
@@ -204,17 +210,21 @@ export const deletePost = async (req: Request, res: Response) => {
 export const getPostById = async (req: Request, res: Response) => {
   try {
     const postId = matchedData(req).postId as MongooseDocumentId;
-    const post = await Post.findById(postId)
-      .populate({
-        path: 'author',
-        select: ['username', '_id'],
-      })
-      .select('-likes -comments');
+    const post = await Post.findById(postId).populate({
+      path: 'author',
+      select: ['username', '_id'],
+    });
+
     if (!post) {
       res.sendResponse(404, 'Post not found', true);
       return;
     }
-    res.sendResponse(200, 'Post retrieved successfully', false, post);
+    res.sendResponse(
+      200,
+      'Post retrieved successfully',
+      false,
+      postDto(post, new mongoose.Types.ObjectId(req.user?.id))
+    );
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);
@@ -284,4 +294,36 @@ export const getPostLikedUsers = async (req: Request, res: Response) => {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);
   }
+};
+
+/**
+ * Transforms a post object into a DTO (Data Transfer Object) format by adding
+ * additional fields and removing sensitive information.
+ *
+ * @param post - The post object to be transformed. It is expected to have 'likes'
+ *               and 'comments' arrays.
+ * @param currentUser - The current user's ID used to determine if the post is
+ *                      liked by them.
+ * @returns An object containing the post data with additional fields:
+ *          - isLiked: A boolean indicating if the current user has liked the post.
+ *          - likesCount: The number of likes the post has received.
+ *          - commentsCount: The number of comments the post has received.
+ *          - comments: Undefined to remove sensitive comment data.
+ *          - likes: Undefined to remove sensitive like data.
+ */
+const postDto = (post: unknown, currentUser: unknown) => {
+  console.log(currentUser, post);
+  return {
+    // @ts-expect-error TODO: fix this
+    ...post.toJSON(),
+    // @ts-expect-error TODO: fix this
+    isLiked: post.likes.includes(currentUser),
+    // @ts-expect-error TODO: fix this
+    likesCount: post.likes.length,
+    // @ts-expect-error TODO: fix this
+    commentsCount: post.comments.length,
+
+    comments: undefined,
+    likes: undefined,
+  };
 };
