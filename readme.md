@@ -2,9 +2,15 @@
 
 FeelSocial is a social media backend API built using **Express**, **MongoDB**, **TypeScript**, and **Mongoose**. It supports user authentication, posting, comments, likes, and friend management. The application is optimized for retrieving posts based on friends, mutual friends, and interactions.
 
+## Demo
+
+> **LiveURL on Render:** <https://dummy-feelsocial.onrender.com> >  
+> **For Dummy Users, please check [here](./src/dummydata/seed.ts)**
+
 ## Table of Contents
 
 - [FeelSocial](#feelsocial)
+  - [Demo](#demo)
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
   - [Technologies](#technologies)
