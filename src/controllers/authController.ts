@@ -1,3 +1,4 @@
+import { JWT_SECRET } from 'config/constants';
 import { type Request, type Response } from 'express';
 import { matchedData } from 'express-validator';
 import jwt from 'jsonwebtoken';
@@ -22,7 +23,7 @@ export const loginUser = async (req: Request, res: Response) => {
       return res.sendResponse(401, 'Invalid credentials', true);
     }
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!, {
+    const token = jwt.sign({ id: user.id }, JWT_SECRET!, {
       expiresIn: '1d',
     });
     res.sendResponse(200, 'Login successful', false, { token, user });
@@ -55,7 +56,7 @@ export const registerUser = async (req: Request, res: Response) => {
     }
 
     const user = await User.create({ username, email, password });
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!, {
+    const token = jwt.sign({ id: user.id }, JWT_SECRET!, {
       expiresIn: '1d',
     });
 

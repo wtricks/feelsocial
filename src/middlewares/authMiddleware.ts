@@ -1,3 +1,4 @@
+import { JWT_SECRET } from 'config/constants';
 import { type Request, type Response } from 'express';
 import jwt from 'jsonwebtoken';
 
@@ -16,7 +17,7 @@ const authMiddleware = (req: Request, res: Response, next: () => void) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    const decoded = jwt.verify(token, JWT_SECRET!);
     req.user = decoded as { id: string };
     return next();
   } catch (error: unknown) {

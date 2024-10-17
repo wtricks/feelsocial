@@ -1,5 +1,4 @@
 import cors from 'cors';
-import dotenv from 'dotenv';
 import express from 'express';
 import rateLimiter from 'express-rate-limit';
 import path from 'path';
@@ -8,15 +7,14 @@ import { ROOT } from 'config/constants';
 import { connectDB } from 'config/db';
 import responseMiddleware from 'middlewares/responseMiddleware';
 
-import swaggerDocs from 'config/swagger';
 import authRoutes from 'routes/authRoutes';
 import commentRouts from 'routes/commentRoutes';
 import postRoutes from 'routes/postRoutes';
 import userRoutes from 'routes/userRoutes';
 
-dotenv.config();
-
 const app = express();
+app.set('trust proxy', 1);
+
 const limiter = rateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -27,7 +25,7 @@ const limiter = rateLimiter({
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: '*',
     optionsSuccessStatus: 200,
   })
 );
@@ -51,10 +49,9 @@ app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRouts);
 
 connectDB().then(() => {
-  app.listen(process.env.PORT, () => {
-    console.log(`Server running on port ${process.env.PORT}`);
+  app.listen(5000, () => {
+    console.log(`Server running on port ${5000}`);
   });
-
-  // Swagger Docs
-  swaggerDocs(app);
 });
+
+export default app;
