@@ -1,11 +1,9 @@
-import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 
+import { connectDB } from 'config/db';
 import Comment, { IComment } from 'models/Comment';
 import Post, { type IPost } from 'models/Post';
 import User, { type IUser } from 'models/User';
-import mongoose from 'mongoose';
-
-dotenv.config();
 
 async function clearPreviousData(): Promise<void> {
   try {
@@ -143,24 +141,24 @@ async function createFriendConnections(users: IUser[]): Promise<void> {
   console.log('Friend connections created');
 }
 
-async function seedDatabase(URL: string): Promise<void> {
-  try {
-    await mongoose.connect(URL);
+async function seedDatabase(): Promise<void> {
+  connectDB().then(async () => {
+    try {
+      // clear data
+      await clearPreviousData();
 
-    // clear data
-    await clearPreviousData();
+      const users = await createDummyUsers();
+      const posts = await createDummyPosts(users);
+      await createDummyComments(posts, users);
+      await createFriendConnections(users);
 
-    const users = await createDummyUsers();
-    const posts = await createDummyPosts(users);
-    await createDummyComments(posts, users);
-    await createFriendConnections(users);
-
-    console.log('Database seeding completed.');
-  } catch (err) {
-    console.error('Error seeding data:', err);
-  } finally {
-    await mongoose.connection.close();
-  }
+      console.log('Database seeding completed.');
+    } catch (err) {
+      console.error('Error seeding data:', err);
+    } finally {
+      await mongoose.connection.close();
+    }
+  });
 }
 
-seedDatabase(process.env.MONGO_URL!);
+seedDatabase();
