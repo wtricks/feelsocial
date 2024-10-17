@@ -11,7 +11,10 @@ function addJsExtensions(dirPath) {
     process.exit(1);
   }
 
-  console.log(`Adding .js extension to files in: ${dirPath}`);
+  console.log(
+    `Adding .js extension to files in: ${dirPath}`,
+    fs.readdirSync(dirPath)
+  );
 
   // fs.readdirSync(dirPath).forEach((file) => {
   //   const filePath = path.join(dirPath, file);
