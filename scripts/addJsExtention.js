@@ -11,25 +11,27 @@ function addJsExtensions(dirPath) {
     process.exit(1);
   }
 
-  fs.readdirSync(dirPath).forEach((file) => {
-    const filePath = path.join(dirPath, file);
-    const stat = fs.statSync(filePath);
+  console.log(`Adding .js extension to files in: ${dirPath}`);
 
-    if (stat.isDirectory()) {
-      addJsExtensions(filePath);
-    } else if (file.endsWith('.js')) {
-      let content = fs.readFileSync(filePath, 'utf8');
+  // fs.readdirSync(dirPath).forEach((file) => {
+  //   const filePath = path.join(dirPath, file);
+  //   const stat = fs.statSync(filePath);
 
-      content = content.replace(
-        /(import\s.*from\s['"`])(\.\/|\.\.\/)([^'"`]+)(['"`])/g,
-        (match, p1, p2, p3, p4) => {
-          return p1 + p2 + p3 + '.js' + p4; // Append .js extension
-        }
-      );
+  //   if (stat.isDirectory()) {
+  //     addJsExtensions(filePath);
+  //   } else if (file.endsWith('.js')) {
+  //     let content = fs.readFileSync(filePath, 'utf8');
 
-      fs.writeFileSync(filePath, content, 'utf8');
-    }
-  });
+  //     content = content.replace(
+  //       /(import\s.*from\s['"`])(\.\/|\.\.\/)([^'"`]+)(['"`])/g,
+  //       (match, p1, p2, p3, p4) => {
+  //         return p1 + p2 + p3 + '.js' + p4; // Append .js extension
+  //       }
+  //     );
+
+  //     fs.writeFileSync(filePath, content, 'utf8');
+  //   }
+  // });
 }
 
 addJsExtensions(directoryPath.slice(1));
