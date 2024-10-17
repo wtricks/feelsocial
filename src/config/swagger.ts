@@ -7,9 +7,9 @@ const swaggerSpec = swaggerJsdoc({
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Feels Social',
+      title: 'Feel Social',
       description:
-        "API endpoints for a 'feels social media' documented on swagger",
+        "API endpoints for a 'feel social media' documented on swagger",
       contact: {
         name: 'Anuj Kumar',
         email: 'wtricks.ak@gmail.com',
