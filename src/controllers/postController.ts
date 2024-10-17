@@ -312,7 +312,6 @@ export const getPostLikedUsers = async (req: Request, res: Response) => {
  *          - likes: Undefined to remove sensitive like data.
  */
 const postDto = (post: unknown, currentUser: unknown) => {
-  console.log(currentUser, post);
   return {
     // @ts-expect-error TODO: fix this
     ...post.toJSON(),
