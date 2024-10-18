@@ -77,8 +77,12 @@ export const registerUser = async (req: Request, res: Response) => {
  */
 export const getCurrentLoggedInUser = async (req: Request, res: Response) => {
   try {
-    const user = await User.findById(req.user?.id);
-    res.sendResponse(200, 'User retrieved successfully', false, user);
+    const user = (await User.findById(req.user?.id).select('-friendRequests'))!;
+    res.sendResponse(200, 'User retrieved successfully', false, {
+      ...user.toJSON(),
+      friendsCount: user.friends.length,
+      friends: undefined,
+    });
   } catch (error) {
     console.log(error);
     res.sendResponse(500, 'Internal server error', true);
