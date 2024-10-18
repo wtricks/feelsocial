@@ -3,7 +3,7 @@ import express from 'express';
 import rateLimiter from 'express-rate-limit';
 import path from 'path';
 
-import { ROOT } from 'config/constants';
+import { CORS_ORIGIN, PORT, ROOT } from 'config/constants';
 import { connectDB } from 'config/db';
 import responseMiddleware from 'middlewares/responseMiddleware';
 
@@ -25,7 +25,7 @@ const limiter = rateLimiter({
 
 app.use(
   cors({
-    origin: '*',
+    origin: CORS_ORIGIN,
     optionsSuccessStatus: 200,
   })
 );
@@ -49,8 +49,8 @@ app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRouts);
 
 connectDB().then(() => {
-  app.listen(5000, () => {
-    console.log(`Server running on port ${5000}`);
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
 });
 
