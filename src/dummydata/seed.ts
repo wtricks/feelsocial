@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import bcrypt from 'bcryptjs';
 import { connectDB } from 'config/db';
 import Comment, { IComment } from 'models/Comment';
 import Post, { type IPost } from 'models/Post';
@@ -62,7 +63,14 @@ async function createDummyUsers(): Promise<IUser[]> {
     },
   ];
 
-  const users = await User.insertMany(usersData);
+  const usersWithHashedPasswords = await Promise.all(
+    usersData.map(async (user) => {
+      user.password = await bcrypt.hash(user.password, bcrypt.genSaltSync(10));
+      return user;
+    })
+  );
+
+  const users = await User.insertMany(usersWithHashedPasswords);
   console.log('Users created:', users);
   return users;
 }
