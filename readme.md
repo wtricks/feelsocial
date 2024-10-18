@@ -4,8 +4,12 @@ FeelSocial is a social media backend API built using **Express**, **MongoDB**, *
 
 ## Demo
 
-> **LiveURL on Render:** <https://dummy-feelsocial.onrender.com> >  
+> **LiveURL on Render:** <https://dummy-feelsocial.onrender.com>  
 > **For Dummy Users, please check [here](./src/dummydata/seed.ts)**
+
+
+> **`NOTE:` Render's Server'll be automatically sleeps after inactivity, so for testing perpose use localhost instead of live URL.**
+> 
 
 ## Table of Contents
 
@@ -67,6 +71,13 @@ To get started with FeelSocial, follow these steps:
    ```bash
    pnpm run dev
    ```
+
+5. Seed local database with dummy data.
+
+    ```bash
+    # Note: This'll erase previous data from the database.
+    pnpm seed
+    ```
 
 ## Environment Variables
 
