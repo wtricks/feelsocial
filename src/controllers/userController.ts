@@ -21,6 +21,7 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
       page: number;
     };
 
+    const currentUserMongoId = new mongoose.Types.ObjectId(currentUserId);
     const friends = (await User.findById(currentUserId))!.friends;
     const suggestedUsers = await User.aggregate([
       {
@@ -30,8 +31,8 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
             {
               $match: {
                 friends: { $in: friends },
-                friendRequests: { $ne: currentUserId },
-                _id: { $ne: currentUserId, $nin: friends },
+                friendRequests: { $ne: currentUserMongoId },
+                _id: { $ne: currentUserMongoId, $nin: friends },
               },
             },
             { $addFields: { score: { $literal: 10 } } },
@@ -48,9 +49,9 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
             },
             {
               $match: {
-                'postsLikedByCurrentUser.likes': currentUserId,
-                _id: { $ne: currentUserId, $nin: friends },
-                friendRequests: { $ne: currentUserId },
+                'postsLikedByCurrentUser.likes': currentUserMongoId,
+                _id: { $ne: currentUserMongoId, $nin: friends },
+                friendRequests: { $ne: currentUserMongoId },
               },
             },
             { $addFields: { score: { $literal: 5 } } },
@@ -67,9 +68,9 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
             },
             {
               $match: {
-                'commentsByCurrentUser.author': currentUserId,
-                _id: { $ne: currentUserId, $nin: friends },
-                friendRequests: { $ne: currentUserId },
+                'commentsByCurrentUser.author': currentUserMongoId,
+                _id: { $ne: currentUserMongoId, $nin: friends },
+                friendRequests: { $ne: currentUserMongoId },
               },
             },
             { $addFields: { score: { $literal: 3 } } },
@@ -100,6 +101,8 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
       },
       {
         $project: {
+          'user.score': 0,
+          'user.password': 0,
           'user.friends': 0,
           'user.friendRequests': 0,
         },
@@ -118,8 +121,8 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
       const randomUsers = await User.aggregate([
         {
           $match: {
-            _id: { $ne: new mongoose.Types.ObjectId(currentUserId) },
-            friendRequests: { $ne: new mongoose.Types.ObjectId(currentUserId) },
+            _id: { $ne: currentUserMongoId },
+            friendRequests: { $ne: currentUserMongoId },
           },
         },
         {
@@ -146,7 +149,10 @@ export const getSuggestUsers = async (req: Request, res: Response) => {
       ]);
 
       return res.sendResponse(200, 'Suggested users', false, [
-        ...suggestedUsers.map(({ user }) => user),
+        ...suggestedUsers.map(({ user, friendsCount }) => ({
+          ...user,
+          friendsCount,
+        })),
         ...randomUsers,
       ]);
     }
